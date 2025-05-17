@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>幸運輪盤</title>
+  <style>
+    :root {
+      --blue-green: #99CDD8;
+      --light-teal: #DAEDE3;
+      --light-beige: #FDEBD3;
+      --pink-orange: #F3C8B2;
+      --gray-green: #CFD6C4;
+      --dark-gray-green: #657166;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Helvetica', 'Arial', sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, var(--light-teal), var(--light-beige));
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: var(--dark-gray-green);
+    }
+    
+    .container {
+      display: flex;
+      width: 90%;
+      max-width: 1200px;
+      gap: 40px;
+      padding: 20px;
+    }
+    
+    .left-content {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+    }
+    
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+    }
+    
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--gray-green);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      transition: transform 3s ease-out;
+    }
+    
+    /* SVG文字樣式 */
+    .wheel-text {
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      pointer-events: none;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+    
+    .spin-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--blue-green);
+      border: none;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s;
+    }
+    
+    .spin-button:hover {
+      background: #7fb9c5;
+      transform: translate(-50%, -50%) scale(1.05);
+    }
+    
+    .spin-button:active {
+      transform: translate(-50%, -50%) scale(0.95);
+    }
+    
+    .result-display {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .result-text {
+      font-size: 32px;
+      font-weight: bold;
+      min-height: 48px;
+      color: var(--dark-gray-green);
+      text-align: center;
+    }
+    
+    .input-container {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+    }
+    
+    .option-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid var(--blue-green);
+      border-radius: 6px;
+      font-size: 16px;
+      outline: none;
+    }
+    
+    .option-input:focus {
+      border-color: var(--pink-orange);
+    }
+    
+    .add-button {
+      padding: 12px 20px;
+      background: var(--blue-green);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .add-button:hover {
+      background: #7fb9c5;
+    }
+    
+    .buttons-container {
+      width: 100%;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+    
+    .action-button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .respin-button {
+      background: var(--pink-orange);
+      color: white;
+    }
+    
+    .respin-button:hover {
+      background: #e9b09a;
+    }
+    
+    .clear-button {
+      background: var(--gray-green);
+      color: white;
+    }
+    
+    .clear-button:hover {
+      background: #bfc6b4;
+    }
+    
+    .right-content {
+      flex: 1;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+    
+    .history-header {
+      margin-bottom: 15px;
+      font-size: 20px;
+      color: var(--dark-gray-green);
+      font-weight: bold;
+    }
+    
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .history-item {
+      padding: 12px;
+      background: var(--light-teal);
+      border-radius: 6px;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .history-time {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    /* 針對轉盤箭頭指示器 */
+    .pointer {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 40px;
+      z-index: 5;
+    }
+    
+    .pointer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid var(--dark-gray-green);
+    }
+    
+    @media (max-width: 920px) {
+      .container {
+        flex-direction: column;
+      }
+      
+      .right-content {
+        height: 300px;
+      }
+    }
+    
+    @media (max-width: 500px) {
+      .wheel-container {
+        width: 300px;
+        height: 300px;
+      }
+      
+      .options-list {
+        max-height: 150px;
+      }
+    }
+    
+    .option-management {
+      margin-top: 30px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      width: 100%;
+    }
+    
+    .options-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: var(--dark-gray-green);
+    }
+    
+    .options-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .option-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--light-teal);
+      border-radius: 30px;
+      min-width: 100px;
+    }
+    
+    .option-text {
+      margin-right: 8px;
+      font-size: 14px;
+    }
+    
+    .delete-option-button {
+      background: none;
+      border: none;
+      color: var(--dark-gray-green);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      padding: 0;
+      transition: all 0.2s;
+    }
+    
+    .delete-option-button:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="left-content">
+      <div class="wheel-container">
+        <div class="wheel" id="wheel"></div>
+        <button class="spin-button" id="spinButton">開始</button>
+        <div class="pointer"></div>
+      </div>
+      
+      <div class="result-display">
+        <div class="result-text" id="resultText"></div>
+        
+      <div class="option-management">
+        <h3 class="options-title">選項管理</h3>
+        <div class="options-list" id="optionsList"></div>
+        
+        <div class="input-container">
+          <input type="text" class="option-input" id="optionInput" placeholder="輸入選項...">
+          <button class="add-button" id="addButton">新增</button>
+        </div>
+        
+        <div class="buttons-container">
+          <button class="action-button respin-button" id="respinButton">重新轉</button>
+          <button class="action-button clear-button" id="clearButton">清除全部</button>
+        </div>
+      </div>
+      </div>
+    </div>
+    
+    <div class="right-content">
+      <h3 class="history-header">抽中紀錄</h3>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const wheel = document.getElementById('wheel');
+      const spinButton = document.getElementById('spinButton');
+      const resultText = document.getElementById('resultText');
+      const optionInput = document.getElementById('optionInput');
+      const addButton = document.getElementById('addButton');
+      const respinButton = document.getElementById('respinButton');
+      const clearButton = document.getElementById('clearButton');
+      const historyList = document.getElementById('historyList');
+      
+      const colors = [
+        '#99CDD8', // 藍綠
+        '#DAEDE3', // 淡青
+        '#FDEBD3', // 淺米
+        '#F3C8B2', // 粉橘
+        '#CFD6C4'  // 灰綠
+      ];
+      
+      // 初始選項
+      let options = ['選項 1', '選項 2', '選項 3', '選項 4', '選項 5', '選項 6'];
+      let isSpinning = false;
+      let spinSound;
+      let resultSound;
+      
+      // 初始化聲音效果
+      function initSounds() {
+        spinSound = new Audio();
+        resultSound = new Audio();
+        
+        // 這裡實際使用時可以替換為真實的音效檔案路徑
+        // spinSound.src = 'spin.mp3';
+        // resultSound.src = 'result.mp3';
+      }
+      
+      // 初始化轉盤 - 確保扇形與選項正確對齊
+      function initWheel() {
+        // 清空現有轉盤
+        while (wheel.firstChild) {
+          wheel.removeChild(wheel.firstChild);
+        }
+        
+        // 如果沒有選項，就不繪製轉盤
+        if (options.length === 0) return;
+        
+        // SVG命名空間
+        const svgNS = "http://www.w3.org/2000/svg";
+        
+        // 創建SVG元素
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("viewBox", "0 0 100 100");
+        svg.style.width = "100%";
+        svg.style.height = "100%";
+        
+        // 計算每個選項的角度
+        const segmentAngle = 360 / options.length;
+        
+        // 計算圓的中心和半徑
+        const centerX = 50;
+        const centerY = 50;
+        const radius = 50;
+        
+        // 為每個選項創建一個扇形
+        options.forEach((option, index) => {
+          // 計算起始角度和結束角度 (從12點鐘方向開始，順時針)
+          // 注意：設定12點鐘方向為0度，因為指針在上方
+          const startAngle = index * segmentAngle;
+          const endAngle = (index + 1) * segmentAngle;
+          
+          // 將角度轉換為弧度
+          const startRad = ((startAngle - 90) * Math.PI) / 180; // -90調整為SVG座標系統
+          const endRad = ((endAngle - 90) * Math.PI) / 180;
+          
+          // 計算扇形的兩個點的坐標
+          const x1 = centerX + radius * Math.cos(startRad);
+          const y1 = centerY + radius * Math.sin(startRad);
+          const x2 = centerX + radius * Math.cos(endRad);
+          const y2 = centerY + radius * Math.sin(endRad);
+          
+          // 建立扇形路徑
+          // 大弧標誌：如果角度>180度，則為1，否則為0
+          const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
+          
+          const path = document.createElementNS(svgNS, "path");
+          const d = [
+            `M ${centerX},${centerY}`, // 移動到中心
+            `L ${x1},${y1}`, // 連線到第一個點
+            `A ${radius},${radius} 0 ${largeArcFlag} 1 ${x2},${y2}`, // 畫弧到第二個點
+            "Z" // 閉合路徑
+          ].join(" ");
+          
+          path.setAttribute("d", d);
+          path.setAttribute("fill", colors[index % colors.length]);
+          path.setAttribute("data-index", index);
+          path.setAttribute("data-option", option);
+          
+          svg.appendChild(path);
+          
+          // 添加文字
+          const text = document.createElementNS(svgNS, "text");
+          
+          // 計算文字放置的角度（選項的中間位置）
+          const midAngle = (startAngle + endAngle) / 2;
+          const midRad = ((midAngle - 90) * Math.PI) / 180;
+          
+          // 計算文字位置 - 距離中心約60-70%的半徑位置
+          const textDistance = radius * 0.65;
+          const textX = centerX + textDistance * Math.cos(midRad);
+          const textY = centerY + textDistance * Math.sin(midRad);
+          
+          text.setAttribute("x", textX);
+          text.setAttribute("y", textY);
+          text.setAttribute("text-anchor", "middle");
+          text.setAttribute("dominant-baseline", "middle");
+          text.setAttribute("fill", "white");
+          text.setAttribute("font-size", `${Math.max(2, 12 - options.length / 2)}px`);
+          text.setAttribute("font-weight", "bold");
+          text.setAttribute("transform", `rotate(${midAngle - 90}, ${textX}, ${textY})`);
+          text.setAttribute("class", "wheel-text");
+          text.setAttribute("filter", "url(#shadow)");
+          text.textContent = option;
+          
+          svg.appendChild(text);
+        });
+        
+        // 添加文字陰影濾鏡
+        const defs = document.createElementNS(svgNS, "defs");
+        const filter = document.createElementNS(svgNS, "filter");
+        filter.setAttribute("id", "shadow");
+        filter.setAttribute("x", "-20%");
+        filter.setAttribute("y", "-20%");
+        filter.setAttribute("width", "140%");
+        filter.setAttribute("height", "140%");
+        
+        const feDropShadow = document.createElementNS(svgNS, "feDropShadow");
+        feDropShadow.setAttribute("dx", "0");
+        feDropShadow.setAttribute("dy", "0");
+        feDropShadow.setAttribute("stdDeviation", "1");
+        feDropShadow.setAttribute("flood-color", "rgba(0,0,0,0.5)");
+        
+        filter.appendChild(feDropShadow);
+        defs.appendChild(filter);
+        svg.appendChild(defs);
+        
+        wheel.appendChild(svg);
+      }
+      
+      // 計算指針位置對應的選項索引
+      function getPointerPosition(rotation) {
+        // 確保旋轉角度在0-360之間
+        const normalizedRotation = ((rotation % 360) + 360) % 360;
+        
+        // 計算每個選項的角度
+        const segmentAngle = 360 / options.length;
+        
+        // 由於轉盤旋轉，指針實際上是反方向，所以我們需要調整角度
+        // 12點鐘方向(0度)對應的是索引0的選項
+        const pointerAngle = (360 - normalizedRotation) % 360;
+        
+        // 計算索引
+        const index = Math.floor(pointerAngle / segmentAngle);
+        
+        return index;
+      }
+      
+      // 轉動輪盤 - 修正指針與結果的一致性
+      function spinWheel() {
+        if (isSpinning || options.length < 2) return;
+        
+        isSpinning = true;
+        resultText.textContent = '';
+        
+        // 隨機選擇一個索引 - 確保每個選項機率相等
+        const randomIndex = Math.floor(Math.random() * options.length);
+        
+        // 計算每個選項的角度
+        const segmentAngle = 360 / options.length;
+        
+        // 計算旋轉角度：
+        // 1. 確保指針最終停在選中選項的中間位置
+        // 2. 12點鐘方向對應索引0的選項
+        const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
+        
+        // 總旋轉角度 = 基本旋轉圈數 + 目標角度
+        const spinRevolutions = 5; // 基本旋轉圈數
+        const totalRotation = spinRevolutions * 360 + targetAngle;
+        
+        // 設置轉動時間和緩動函數
+        const spinDuration = 3000; // 轉動時間（毫秒）
+        wheel.style.transition = `transform ${spinDuration / 1000}s cubic-bezier(0.1, 0.25, 0.1, 1)`;
+        wheel.style.transform = `rotate(${totalRotation}deg)`;
+        
+        // 動畫完成後顯示結果
+        setTimeout(() => {
+          isSpinning = false;
+          
+          // 獲取當前轉盤的角度
+          const currentRotation = totalRotation % 360;
+          
+          // 根據當前轉盤位置獲取指針所指的選項索引
+          const resultIndex = getPointerPosition(currentRotation);
+          const selectedOption = options[resultIndex];
+          
+          // 顯示結果
+          resultText.textContent = selectedOption;
+          
+          // 添加到歷史記錄
+          addToHistory(selectedOption);
+        }, spinDuration);
+      }
+      
+      // 添加到歷史記錄
+      function addToHistory(option) {
+        const now = new Date();
+        const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <span>${option}</span>
+          <span class="history-time">${timeString}</span>
+        `;
+        
+        historyList.insertBefore(historyItem, historyList.firstChild);
+      }
+      
+      // 選項管理區域
+      function updateOptionsList() {
+        const optionsListElement = document.getElementById('optionsList');
+        optionsListElement.innerHTML = '';
+        
+        options.forEach((option, index) => {
+          const optionItem = document.createElement('div');
+          optionItem.className = 'option-item';
+          
+          const optionText = document.createElement('span');
+          optionText.className = 'option-text';
+          optionText.textContent = option;
+          
+          const deleteButton = document.createElement('button');
+          deleteButton.className = 'delete-option-button';
+          deleteButton.innerHTML = '×';
+          deleteButton.title = '刪除選項';
+          deleteButton.dataset.index = index;
+          deleteButton.onclick = function() {
+            deleteOption(index);
+          };
+          
+          optionItem.appendChild(optionText);
+          optionItem.appendChild(deleteButton);
+          optionsListElement.appendChild(optionItem);
+        });
+        
+        // 更新轉盤
+        initWheel();
+      }
+      
+      // 刪除特定選項
+      function deleteOption(index) {
+        if (index >= 0 && index < options.length) {
+          options.splice(index, 1);
+          updateOptionsList();
+        }
+      }
+      
+      // 添加選項
+      function addOption() {
+        const option = optionInput.value.trim();
+        if (option) {
+          options.push(option);
+          updateOptionsList();
+          optionInput.value = '';
+        }
+      }
+      
+      // 清除所有選項和歷史記錄
+      function clearAll() {
+        if (confirm('確定要清除所有選項和歷史記錄嗎？')) {
+          options = [];
+          while (historyList.firstChild) {
+            historyList.removeChild(historyList.firstChild);
+          }
+          resultText.textContent = '';
+          updateOptionsList();
+        }
+      }
+      
+      // 事件監聽
+      spinButton.addEventListener('click', spinWheel);
+      addButton.addEventListener('click', addOption);
+      optionInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addOption();
+      });
+      respinButton.addEventListener('click', spinWheel);
+      clearButton.addEventListener('click', clearAll);
+      
+      // 初始化
+      initSounds();
+      updateOptionsList(); // 使用updateOptionsList替代直接調用initWheel
+    });
+  </script>
+</body>
+</html>
