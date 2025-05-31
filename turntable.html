@@ -529,6 +529,9 @@
         return index;
       }
       
+      // 記錄當前累積旋轉角度
+      let currentRotation = 0;
+      
       // 轉動輪盤 - 修正指針與結果的一致性
       function spinWheel() {
         if (isSpinning || options.length < 2) return;
@@ -548,23 +551,26 @@
         const targetAngle = randomIndex * segmentAngle + segmentAngle / 2;
         
         // 總旋轉角度 = 基本旋轉圈數 + 目標角度
-        const spinRevolutions = 5; // 基本旋轉圈數
-        const totalRotation = spinRevolutions * 360 + targetAngle;
+        const spinRevolutions = 5 + Math.random() * 3; // 基本旋轉圈數 + 隨機額外圈數
+        const additionalRotation = spinRevolutions * 360 + targetAngle;
+        
+        // 更新累積旋轉角度
+        currentRotation += additionalRotation;
         
         // 設置轉動時間和緩動函數
         const spinDuration = 3000; // 轉動時間（毫秒）
         wheel.style.transition = `transform ${spinDuration / 1000}s cubic-bezier(0.1, 0.25, 0.1, 1)`;
-        wheel.style.transform = `rotate(${totalRotation}deg)`;
+        wheel.style.transform = `rotate(${currentRotation}deg)`;
         
         // 動畫完成後顯示結果
         setTimeout(() => {
           isSpinning = false;
           
-          // 獲取當前轉盤的角度
-          const currentRotation = totalRotation % 360;
+          // 獲取當前轉盤的角度（只考慮360度以內的部分）
+          const finalRotation = currentRotation % 360;
           
           // 根據當前轉盤位置獲取指針所指的選項索引
-          const resultIndex = getPointerPosition(currentRotation);
+          const resultIndex = getPointerPosition(finalRotation);
           const selectedOption = options[resultIndex];
           
           // 顯示結果
@@ -647,6 +653,9 @@
             historyList.removeChild(historyList.firstChild);
           }
           resultText.textContent = '';
+          // 重置轉盤旋轉角度
+          currentRotation = 0;
+          wheel.style.transform = 'rotate(0deg)';
           updateOptionsList();
         }
       }
